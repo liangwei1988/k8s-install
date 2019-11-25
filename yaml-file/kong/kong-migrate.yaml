@@ -1,0 +1,54 @@
+apiVersion: "apps/v1beta1"
+kind: StatefulSet
+metadata:
+  name: kong-migrate
+  namespace: thp-kong
+spec:
+  serviceName: kong-migrate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kong-migrate
+        interface: kong-migrate
+    spec:
+      containers:
+        - name: kong-migrate
+          image: kong:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8443
+              name: https
+            - containerPort: 8001
+              name: http-admin
+            - containerPort: 8444
+              name: https-admin
+          env:
+            - name: KONG_DATABASE
+              value: cassandra
+            - name: KONG_DB_UPDATE_PROPAGATION
+              value: "5"
+            - name: KONG_CASSANDRA_CONTACT_POINTS
+              value: cassandra-0.cassandra
+            - name: KONG_ADMIN_LISTEN
+              value: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+            - name: KONG_REAL_IP_RECURSIVE
+              value: "on"
+            - name: KONG_REAL_IP_HEADER
+              value: X-Forwarded-For
+            - name: KONG_TRUSTED_IPS
+              value: 0.0.0.0/0,::/0
+            - name: KONG_PROXY_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_ADMIN_ACCESS_LOG
+              value: /dev/stdout
+            - name: KONG_PROXY_ERROR_LOG
+              value: /dev/stderr
+            - name: KONG_ADMIN_ERROR_LOG
+              value: /dev/stderr
+          command:
+            - kong
+            - migrations
+            - bootstrap
